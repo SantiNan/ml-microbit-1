@@ -43,16 +43,27 @@
             border-radius: 20px; 
             box-shadow: 0 10px 30px rgba(0,0,0,0.15); 
             
-            /* CAMBIOS PARA HACERLO MÁS ANGOSTO */
-            width: 85%;           /* Ocupa el 85% del ancho (deja margen a los lados) */
-            max-width: 360px;     /* Límite de ancho para que no se vea estirado */
-            
-            margin: 0 auto;       /* Lo mantiene centrado */
+            width: 85%;           
+            max-width: 360px;     
+            margin: 0 auto;       
             box-sizing: border-box; 
             touch-action: pan-y;
+        
+            /* NUEVAS LÍNEAS PARA CENTRAR TODO EL CONTENIDO INTERNO */
+            display: flex;
+            flex-direction: column;
+            align-items: center;    /* Centra los elementos horizontalmente */
+            text-align: center;     /* Centra el texto de los párrafos <p> */
         }
 
-        .setup-box p { font-size: 1.3rem; font-weight: bold; margin-bottom: 10px; text-align: left; }
+/* Ajuste para que los textos de los pasos no queden pegados a la izquierda */
+        .setup-box p {
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            width: 100%;            /* Asegura que el texto use todo el ancho para centrarse */
+            text-align: center;     /* Cambiado de 'left' a 'center' */
+        }
 
         input, select { 
             width: 100%;             /* Ocupa el ancho del contenedor */
