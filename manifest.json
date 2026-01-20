@@ -1,6 +1,6 @@
 {
-  "name": "Microbit Face Link",
-  "short_name": "FaceBit",
+  "name": "ML micro:bit",
+  "short_name": "ML micro:bit",
   "start_url": "index.html",
   "display": "standalone",
   "background_color": "#ffffff",
