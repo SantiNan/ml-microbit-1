@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ML-micro:bit</title>
     <link rel="manifest" href="manifest.json">
     
@@ -15,17 +15,19 @@
     /* Reset básico para asegurar que todo use el 100% de la pantalla */
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
-    body { 
-        font-family: 'Segoe UI', Roboto, sans-serif; 
-        text-align: center; 
-        background-color: #f4f4f9; 
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        min-height: 100vh; /* Ocupa todo el alto de la pantalla */
-        padding: 20px;
-    }
+   body { 
+    font-family: 'Segoe UI', Roboto, sans-serif; 
+    text-align: center; 
+    background-color: #f4f4f9; 
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start; /* Cambiado de center para que no se corte arriba */
+    min-height: 100vh;
+    width: 100vw; /* Asegura el ancho total */
+    padding: 10px; /* Menos padding para ganar espacio */
+    overflow-x: hidden; /* Evita desplazamiento lateral */
+}
 
     h1 { 
         font-size: 1.5rem; 
@@ -34,14 +36,14 @@
     }
 
     .setup-box { 
-        background: white; 
-        padding: 20px; 
-        border-radius: 15px; 
-        box-shadow: 0 10px 25px rgba(0,0,0,0.1); 
-        width: 100%;
-        max-width: 400px; /* No se estira demasiado en tablets */
-        margin-bottom: 20px; 
-    }
+    background: white; 
+    padding: 20px; 
+    border-radius: 15px; 
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1); 
+    width: 95%; /* Ocupa casi todo el ancho en móviles */
+    max-width: 500px; 
+    margin-top: 10px;
+}
 
     input { 
         padding: 12px; 
@@ -52,18 +54,19 @@
         font-size: 16px; /* Evita el zoom automático en iOS/Android */
     }
 
-    /* Recuadro de la cámara mejorado */
-    #webcam-container { 
-        margin: 15px auto; 
-        border: 6px solid #333; 
-        border-radius: 20px;
-        width: 280px;  /* Tamaño ideal para la mayoría de móviles */
-        height: 280px; 
-        overflow: hidden;
-        background-color: #000;
-        display: none; 
-        box-shadow: 0 8px 15px rgba(0,0,0,0.2);
-    }
+   /* Ajuste de la cámara para que sea más grande */
+#webcam-container { 
+    margin: 10px auto; 
+    border: 4px solid #333; 
+    border-radius: 15px;
+    width: 90vw;  /* 90% del ancho de la pantalla */
+    height: 90vw; /* Mantiene formato cuadrado */
+    max-width: 400px; /* Límite para que no sea gigante en tablets */
+    max-height: 400px;
+    overflow: hidden;
+    background-color: #000;
+    display: none; 
+}
 
     #webcam-container canvas {
         width: 100% !important;
@@ -173,7 +176,7 @@ async function startVisualML(modelUrl, type) {
         model = await tmPose.load(modelJson, metadataJson);
     }
 
-    webcam = new (type === "image" ? tmImage.Webcam : tmPose.Webcam)(300, 300, true);
+    webcam = new (type === "image" ? tmImage.Webcam : tmPose.Webcam)(400, 400, true);
     await webcam.setup();
     await webcam.play();
     document.getElementById("webcam-container").appendChild(webcam.canvas);
