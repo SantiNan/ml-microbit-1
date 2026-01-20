@@ -37,29 +37,40 @@
 }
 
     h1 { 
-        font-size: 1.5rem; 
-        margin-bottom: 20px; 
-        color: #333;
-    }
+    font-size: 2.2rem; 
+    color: #333; 
+    margin: 20px 0; 
+}
 
     .setup-box { 
     background: white; 
-    padding: 20px; 
-    border-radius: 15px; 
-    box-shadow: 0 10px 25px rgba(0,0,0,0.1); 
-    width: 95%; /* Ocupa casi todo el ancho en móviles */
-    max-width: 500px; 
-    margin-top: 10px;
+    padding: 30px; /* Más espacio interno */
+    border-radius: 20px; 
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15); 
+    width: 95%; 
+    max-width: 450px;
+    touch-action: pan-y;
 }
 
-    input { 
-        padding: 12px; 
-        width: 100%; /* Se adapta al ancho del contenedor */
-        border: 2px solid #ddd; 
-        border-radius: 8px; 
-        margin: 15px 0; 
-        font-size: 16px; /* Evita el zoom automático en iOS/Android */
-    }
+/* Textos de los pasos (1, 2, 3) */
+.setup-box p {
+    font-size: 1.3rem;
+    font-weight: bold;
+    margin-bottom: 10px;
+    text-align: left;
+}
+
+
+    /* Selectores y cajas de texto más grandes */
+input, select { 
+    padding: 18px; /* Mucho más altos para tocar fácil */
+    width: 100%; 
+    border: 2px solid #bbb; 
+    border-radius: 12px; 
+    margin-bottom: 25px; /* Más separación entre pasos */
+    font-size: 20px !important; /* Texto grande dentro */
+    background-color: #fafafa;
+}
 
    /* Ajuste de la cámara para que sea más grande */
 #webcam-container { 
@@ -89,23 +100,25 @@
         min-height: 30px;
     }
 
-    button { 
-        width: 100%;
-        padding: 15px; 
-        font-size: 18px; 
-        font-weight: bold;
-        cursor: pointer; 
-        background: #28a745; 
-        color: white; 
-        border: none; 
-        border-radius: 10px;
-        transition: transform 0.2s, background 0.2s;
-    }
+   /* Botón gigante y llamativo */
+button { 
+    width: 100%; 
+    padding: 22px; 
+    font-size: 22px; 
+    font-weight: 900;
+    background: #28a745; 
+    color: white; 
+    border: none; 
+    border-radius: 15px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    box-shadow: 0 4px 10px rgba(40, 167, 69, 0.3);
+}
 
-    button:active {
-        transform: scale(0.98); /* Efecto visual al tocar en el móvil */
-        background: #218838;
-    }
+   button:active {
+    background: #218838;
+    transform: scale(0.97);
+}
 
     button:disabled { background: #ccc; }
 </style>
