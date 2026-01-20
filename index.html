@@ -22,9 +22,17 @@
         }
 
         body { 
-            display: flex; flex-direction: column; 
-            align-items: center; justify-content: flex-start; 
-            padding: 10px; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;      /* Centra horizontalmente */
+            justify-content: center;   /* Centra verticalmente */
+            min-height: 100vh;        /* Usa todo el alto de la pantalla */
+            width: 100%;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            background-color: #f4f4f9;
+            overflow-x: hidden;       /* Evita desplazamiento lateral accidental */
         }
 
         h1 { font-size: 2.2rem; color: #333; margin: 20px 0; }
