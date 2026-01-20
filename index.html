@@ -168,9 +168,11 @@ async function init() {
     try {
         // Bluetooth
         const device = await navigator.bluetooth.requestDevice({
-            acceptAllDevices: true,
-            optionalServices: ['6e400001-b5a3-f393-e0a9-e50e24dcca9e']
-        });
+    filters: [
+        { namePrefix: 'BBC micro:bit' } // Filtra dispositivos que empiecen con este nombre
+    ],
+    optionalServices: ['6e400001-b5a3-f393-e0a9-e50e24dcca9e']
+});
         const server = await device.gatt.connect();
         const service = await server.getPrimaryService('6e400001-b5a3-f393-e0a9-e50e24dcca9e');
         uartCharacteristic = await service.getCharacteristic('6e400003-b5a3-f393-e0a9-e50e24dcca9e');
