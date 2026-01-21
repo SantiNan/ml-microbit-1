@@ -205,20 +205,21 @@
                     }
                 }
 
-                // Animación reactiva
+                // Animación reactiva corregida
                 bars.forEach((bar) => {
-                    const noise = Math.random() * 0.4;
-                    // 1. Reducimos el ruido visual aleatorio (de 0.4 a 0.1)
+                    // Solo una declaración de noise
                     const noise = Math.random() * 0.1; 
-                    // 2. Multiplicador de escala: Cámbialo de 2.8 a un valor más bajo (ej. 1.5)
-                    // Esto hará que las barras no suban tanto con sonidos débiles.
+                    
+                    // Multiplicador bajo (1.5) para que no sea tan sensible al ruido ambiente
                     let scale = (highestScore * 1.5) + noise; 
-                    // 3. Umbral de "reposo": Si la predicción es muy baja, forzamos escala mínima
+                    
+                    // Umbral de reposo: si el sonido es muy bajo, escala mínima
                     if (highestScore < 0.2) {
-                        scale = 0.2; // Barras casi planas si no hay voz clara
+                        scale = 0.2; 
                     }
-                    // Limitar escala máxima para que no se salgan de la pantalla
+                    
                     if (scale > 2.5) scale = 2.5;
+
                     bar.style.transform = `scaleY(${scale})`;
                     bar.style.backgroundColor = highestScore > 0.7 ? "#ff4757" : "#007bff";
                 });
@@ -227,7 +228,7 @@
                     updateLabelAndSend(bestLabel);
                 }
             }, { 
-                probabilityThreshold: 0.85,
+                probabilityThreshold: 0.85, // Umbral alto para mayor precisión
                 includeSpectrogram: true, 
                 invokeCallbackOnNoise: true 
             });
@@ -235,6 +236,7 @@
             console.error("Error en Audio:", e);
         }
     }
+
 
     async function startVisualML(modelUrl, type) {
         const modelJson = modelUrl + "model.json";
