@@ -126,7 +126,8 @@
     let lastPrediction = "";
     let modelType = "";
 
-    tf.setBackend('webgl'); // O 'webgpu' si el dispositivo es moderno
+    tf.env.set('WEBGL_PACK', false); 
+    tf.setBackend('webgl'); 
 
     // BLOQUEO DE ZOOM
     document.addEventListener('touchmove', (e) => {
@@ -253,49 +254,53 @@
         await tmImage.load(modelJson, metadataJson) : 
         await tmPose.load(modelJson, metadataJson);
 
-    // Ajuste 2026: Definimos el tamaño aquí y forzamos flip
+    // Forzamos un tamaño estándar que todas las GPUs soportan bien
     const size = 224; 
-    const flip = true;
-    webcam = new (type === "image" ? tmImage.Webcam : tmPose.Webcam)(size, size, flip);
+    webcam = new (type === "image" ? tmImage.Webcam : tmPose.Webcam)(size, size, true);
     
-    await webcam.setup(); // Solicita acceso a cámara
+    await webcam.setup({ facingMode: "user" }); // Forzamos cámara frontal
+    
+    // IMPORTANTE: Forzamos atributos para evitar que el navegador congele el video
+    const videoElement = webcam.webcam;
+    videoElement.setAttribute('playsinline', '');
+    videoElement.setAttribute('muted', '');
+    videoElement.play();
+
     await webcam.play();
     
     const container = document.getElementById("webcam-container");
-    container.innerHTML = ""; // Limpiamos cualquier canvas previo congelado
-    container.appendChild(webcam.canvas); // Añadimos el nuevo canvas activo
+    container.innerHTML = ""; 
+    container.appendChild(webcam.canvas); 
     
     window.requestAnimationFrame(visualLoop);
 }
 
-   async function visualLoop() {
+async function visualLoop() {
+    // Si la webcam no está lista o se detuvo, salimos para no bloquear
     if (webcam && webcam.canvas) {
-        webcam.update(); // 1. Actualiza el frame de la cámara
+        webcam.update(); 
+
+        const ctx = webcam.canvas.getContext("2d");
+        
+        // TRUCO MAESTRO: Dibujamos el elemento de video directamente, no el canvas de la librería
+        // Esto asegura que si la cámara se mueve, el canvas se actualiza SIEMPRE
+        ctx.drawImage(webcam.webcam, 0, 0, webcam.canvas.width, webcam.canvas.height);
 
         let prediction;
-        const ctx = webcam.canvas.getContext("2d");
-
         if (modelType === "image") {
             prediction = await model.predict(webcam.canvas);
-        } 
-        else if (modelType === "pose") {
-            // 2. Para Pose, dibujamos el video MANUALMENTE para que no se congele
-            ctx.drawImage(webcam.webcam, 0, 0, webcam.canvas.width, webcam.canvas.height);
-            
-            // 3. Predicción asíncrona
-            const { pose, posenetOutput } = await model.estimatePose(webcam.canvas);
+        } else {
+            // En Pose, usamos el video directamente para estimar
+            const { pose, posenetOutput } = await model.estimatePose(webcam.webcam);
             prediction = await model.predict(posenetOutput);
-
-            // 4. Dibujamos el esqueleto (opcional, ayuda a saber si detecta)
+            
             if (pose) {
                 tmPose.drawKeypoints(pose.keypoints, 0.5, ctx);
                 tmPose.drawSkeleton(pose.keypoints, 0.5, ctx);
             }
         }
-
         processPredictions(prediction);
     }
-    // 5. El bucle se repite
     window.requestAnimationFrame(visualLoop);
 }
 // Función auxiliar para que el canvas no se vea negro o congelado
