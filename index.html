@@ -15,7 +15,7 @@
         .setup-box { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 85%; max-width: 360px; text-align: center; }
         input { width: 100%; padding: 15px; border: 2px solid #bbb; border-radius: 12px; margin-bottom: 20px; font-size: 16px; box-sizing: border-box; }
         button { width: 100%; padding: 20px; font-size: 18px; font-weight: 900; background: #28a745; color: white; border: none; border-radius: 15px; cursor: pointer; text-transform: uppercase; }
-        #webcam-container { margin: 20px auto; border: 5px solid #333; border-radius: 20px; overflow: hidden; display: none; width: 224px; height: 224px; }
+        #webcam-container { margin: 20px auto; border: 5px solid #333; border-radius: 20px; overflow: hidden; display: none; width: 400px; height: 400px; }
         #audio-visualizer { display: none; justify-content: center; align-items: flex-end; gap: 8px; height: 80px; margin: 20px; }
         .bar { width: 12px; height: 20px; background-color: #007bff; border-radius: 5px; transition: transform 0.1s; transform-origin: bottom; }
         #label-container { font-size: 32px; font-weight: 900; margin-top: 10px; text-align: center; }
@@ -36,8 +36,6 @@
     <div id="audio-visualizer">
         <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
     </div>
-
-    <div id="label-container">Listo</div>
 
     <script>
         let model, webcam, recognizer, uartCharacteristic, bleDevice;
