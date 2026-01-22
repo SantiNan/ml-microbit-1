@@ -245,41 +245,59 @@
     }
 
 
-    async function startVisualML(modelUrl, type) {
-        const modelJson = modelUrl + "model.json";
-        const metadataJson = modelUrl + "metadata.json";
-        model = (type === "image") ? await tmImage.load(modelJson, metadataJson) : await tmPose.load(modelJson, metadataJson);
-        
-        webcam = new (type === "image" ? tmImage.Webcam : tmPose.Webcam)(224, 224, true);
-        await webcam.setup();
-        await webcam.play();
-        document.getElementById("webcam-container").appendChild(webcam.canvas);
-        window.requestAnimationFrame(visualLoop);
-    }
+   async function startVisualML(url, type) {
+    const modelJson = url + "model.json";
+    const metadataJson = url + "metadata.json";
+    
+    model = (type === "image") ? 
+        await tmImage.load(modelJson, metadataJson) : 
+        await tmPose.load(modelJson, metadataJson);
+
+    // Ajuste 2026: Definimos el tamaño aquí y forzamos flip
+    const size = 224; 
+    const flip = true;
+    webcam = new (type === "image" ? tmImage.Webcam : tmPose.Webcam)(size, size, flip);
+    
+    await webcam.setup(); // Solicita acceso a cámara
+    await webcam.play();
+    
+    const container = document.getElementById("webcam-container");
+    container.innerHTML = ""; // Limpiamos cualquier canvas previo congelado
+    container.appendChild(webcam.canvas); // Añadimos el nuevo canvas activo
+    
+    window.requestAnimationFrame(loop);
+}
 
    async function visualLoop() {
     if (webcam && webcam.canvas) {
-        webcam.update(); // Actualiza el frame de la cámara
+        webcam.update(); // 1. Actualiza el frame de la cámara
 
         let prediction;
+        const ctx = webcam.canvas.getContext("2d");
+
         if (modelType === "image") {
             prediction = await model.predict(webcam.canvas);
-        } else if (modelType === "pose") {
-            // CORRECCIÓN PARA POSE:
-            // estimatePose dibuja el esqueleto y permite que el video fluya
+        } 
+        else if (modelType === "pose") {
+            // 2. Para Pose, dibujamos el video MANUALMENTE para que no se congele
+            ctx.drawImage(webcam.webcam, 0, 0, webcam.canvas.width, webcam.canvas.height);
+            
+            // 3. Predicción asíncrona
             const { pose, posenetOutput } = await model.estimatePose(webcam.canvas);
             prediction = await model.predict(posenetOutput);
-            
-            // Opcional: Dibujar el esqueleto en el canvas para ver que está activo
-            drawPose(pose); 
+
+            // 4. Dibujamos el esqueleto (opcional, ayuda a saber si detecta)
+            if (pose) {
+                tmPose.drawKeypoints(pose.keypoints, 0.5, ctx);
+                tmPose.drawSkeleton(pose.keypoints, 0.5, ctx);
+            }
         }
-        
+
         processPredictions(prediction);
     }
-    // Usamos requestAnimationFrame para que el navegador decida el mejor momento de refresco
+    // 5. El bucle se repite
     window.requestAnimationFrame(visualLoop);
 }
-
 // Función auxiliar para que el canvas no se vea negro o congelado
 function drawPose(pose) {
     if (webcam.canvas) {
