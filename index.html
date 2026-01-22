@@ -85,7 +85,7 @@
 
         async function startImageML(url) {
             model = await tmImage.load(url + "model.json", url + "metadata.json");
-            webcam = new tmImage.Webcam(224, 224, true);
+            webcam = new tmImage.Webcam(400, 400, true);
             await webcam.setup();
             await webcam.play();
             document.getElementById("webcam-container").appendChild(webcam.canvas);
