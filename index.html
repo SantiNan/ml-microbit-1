@@ -255,18 +255,37 @@
         window.requestAnimationFrame(visualLoop);
     }
 
-    async function visualLoop() {
-        webcam.update();
+   async function visualLoop() {
+    if (webcam && webcam.canvas) {
+        webcam.update(); // Actualiza el frame de la cámara
+
         let prediction;
         if (modelType === "image") {
             prediction = await model.predict(webcam.canvas);
-        } else {
-            const { posenetOutput } = await model.estimatePose(webcam.canvas);
+        } else if (modelType === "pose") {
+            // CORRECCIÓN PARA POSE:
+            // estimatePose dibuja el esqueleto y permite que el video fluya
+            const { pose, posenetOutput } = await model.estimatePose(webcam.canvas);
             prediction = await model.predict(posenetOutput);
+            
+            // Opcional: Dibujar el esqueleto en el canvas para ver que está activo
+            drawPose(pose); 
         }
+        
         processPredictions(prediction);
-        window.requestAnimationFrame(visualLoop);
     }
+    // Usamos requestAnimationFrame para que el navegador decida el mejor momento de refresco
+    window.requestAnimationFrame(visualLoop);
+}
+
+// Función auxiliar para que el canvas no se vea negro o congelado
+function drawPose(pose) {
+    if (webcam.canvas) {
+        const ctx = webcam.canvas.getContext("2d");
+        ctx.drawImage(webcam.canvas, 0, 0);
+        // Aquí podrías dibujar los puntos clave (keypoints) si quisieras ver el esqueleto
+    }
+}
 
     function processPredictions(predictions) {
         if (!predictions) return;
