@@ -138,6 +138,42 @@
         }
     }
 
+    async function startIndependentVisualizer() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const analyser = audioContext.createAnalyser();
+        const source = audioContext.createMediaStreamSource(stream);
+        
+        // Configuración para mayor fluidez
+        analyser.fftSize = 256; 
+        analyser.smoothingTimeConstant = 0.8; // Suaviza el movimiento entre frames
+        source.connect(analyser);
+
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+        const bars = document.querySelectorAll('.bar');
+
+        function updateBars() {
+            requestAnimationFrame(updateBars);
+            analyser.getByteFrequencyData(dataArray);
+
+            bars.forEach((bar, i) => {
+                // Seleccionamos un rango de frecuencias que se vea bien (índices bajos para bajos/mids)
+                const value = dataArray[i * 2] || 0; 
+                let scale = (value / 255) * 4; // Escala de 0 a 4 veces el tamaño base
+                if (scale < 0.2) scale = 0.2;
+
+                bar.style.transform = `scaleY(${scale})`;
+                // Cambio de color opcional basado en la intensidad
+                bar.style.backgroundColor = value > 180 ? "#ff4757" : "#007bff";
+            });
+        }
+        updateBars();
+    } catch (err) {
+        console.error("Error visualizador independiente:", err);
+    }
+}
+
     async function init() {
         const urlInput = document.getElementById("model-url").value.trim();
         if (!urlInput.includes("teachablemachine.withgoogle.com")) {
@@ -167,7 +203,10 @@
             
             // --- INICIALIZACIÓN SEGÚN TIPO ---
             if (modelType === "audio") {
-                document.getElementById("audio-visualizer").style.display = "flex"; 
+                document.getElementById("audio-visualizer").style.display = "flex";
+                // Iniciamos el visualizador nativo (Independiente)
+                startIndependentVisualizer();
+                // Iniciamos la IA (Solo para reconocer palabras y enviar al micro:bit)
                 startAudioML(TM_MODEL_URL);
             } else {
                 document.getElementById("webcam-container").style.display = "block";
@@ -180,53 +219,31 @@
     }
     async function startAudioML(modelUrl) {
     try {
-        recognizer = speechCommands.create("BROWSER_FFT", undefined, modelUrl + "model.json", modelUrl + "metadata.json");
+        const checkpoint = modelUrl + "model.json";
+        const metadata = modelUrl + "metadata.json";
+        recognizer = speechCommands.create("BROWSER_FFT", undefined, checkpoint, metadata);
         await recognizer.ensureModelLoaded();
 
         recognizer.listen(result => {
-            // --- 1. LÓGICA DE BARRAS SENSIBLES ---
-            const fftData = result.spectrogram.data;
-            let sum = 0;
-            // Los valores suelen ser negativos; usamos Math.abs para medir la energía
-            for (let i = 0; i < fftData.length; i++) {
-                sum += Math.abs(fftData[i]);
-            }
-            const avgEnergy = sum / fftData.length;
-
-            // AJUSTE DE SENSIBILIDAD 2026:
-            // Restamos el "piso de ruido" y multiplicamos por un factor de escala mayor
-            // Si las barras se mueven poco, baja el 20 o sube el 0.8
-            let volumeBoost = (avgEnergy - 20) * 0.8; 
-            
-            const bars = document.querySelectorAll('.bar');
-            bars.forEach((bar, index) => {
-                // Añadimos una variación por bar para que no se muevan todas igual
-                let individualBoost = volumeBoost + (Math.random() * 5);
-                let scale = individualBoost / 10; 
-                
-                if (scale < 0.2) scale = 0.2; // Tamaño mínimo (silencio)
-                if (scale > 4) scale = 4;     // Tamaño máximo (grito)
-
-                bar.style.transform = `scaleY(${scale})`;
-                
-                // Color dinámico: cambia a rojo si el volumen es alto
-                bar.style.backgroundColor = scale > 2.5 ? "#ff4757" : "#007bff";
-            });
-
-            // --- 2. LÓGICA DE PREDICCIÓN (SE MANTIENE IGUAL) ---
+            // --- LÓGICA DE PREDICCIÓN ÚNICAMENTE ---
             const labels = recognizer.wordLabels();
             const formattedPredictions = labels.map((label, index) => ({
                 className: label,
                 probability: result.scores[index]
             }));
+
+            // Enviamos al procesador común (Imagen/Pose/Audio)
             processPredictions(formattedPredictions);
 
         }, { 
-            probabilityThreshold: 0.00, 
-            includeSpectrogram: true, 
+            // Subimos el umbral de nuevo ya que las barras no dependen de esto
+            probabilityThreshold: 0.75, 
+            includeSpectrogram: false, // Ya no necesitamos el espectrograma aquí
             invokeCallbackOnNoise: true 
         });
-    } catch (e) { console.error(e); }
+    } catch (e) {
+        console.error("Error en el modelo de Audio:", e);
+    }
 }
 
     async function startVisualML(modelUrl, type) {
