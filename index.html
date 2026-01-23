@@ -180,41 +180,45 @@
     }
     async function startAudioML(modelUrl) {
     try {
-        const checkpoint = modelUrl + "model.json";
-        const metadata = modelUrl + "metadata.json";
-        recognizer = speechCommands.create("BROWSER_FFT", undefined, checkpoint, metadata);
+        recognizer = speechCommands.create("BROWSER_FFT", undefined, modelUrl + "model.json", modelUrl + "metadata.json");
         await recognizer.ensureModelLoaded();
 
         recognizer.listen(result => {
-            // --- 1. LÓGICA DE LAS BARRAS (VOLUMEN) ---
-            // Usamos el espectrograma para calcular la intensidad media (volumen)
+            // --- 1. LÓGICA DE BARRAS SENSIBLES ---
             const fftData = result.spectrogram.data;
             let sum = 0;
+            // Los valores suelen ser negativos; usamos Math.abs para medir la energía
             for (let i = 0; i < fftData.length; i++) {
                 sum += Math.abs(fftData[i]);
             }
-            const volume = sum / fftData.length; // Promedio de energía
+            const avgEnergy = sum / fftData.length;
+
+            // AJUSTE DE SENSIBILIDAD 2026:
+            // Restamos el "piso de ruido" y multiplicamos por un factor de escala mayor
+            // Si las barras se mueven poco, baja el 20 o sube el 0.8
+            let volumeBoost = (avgEnergy - 20) * 0.8; 
             
             const bars = document.querySelectorAll('.bar');
-            bars.forEach((bar) => {
-                // Normalizamos el volumen para la escala visual (ajustar el 40 según sensibilidad)
-                let scale = (volume / 40) + (Math.random() * 0.1);
-                if (scale < 0.2) scale = 0.2;
-                if (scale > 3) scale = 3;
+            bars.forEach((bar, index) => {
+                // Añadimos una variación por bar para que no se muevan todas igual
+                let individualBoost = volumeBoost + (Math.random() * 5);
+                let scale = individualBoost / 10; 
                 
+                if (scale < 0.2) scale = 0.2; // Tamaño mínimo (silencio)
+                if (scale > 4) scale = 4;     // Tamaño máximo (grito)
+
                 bar.style.transform = `scaleY(${scale})`;
-                // Color basado en intensidad de volumen, no en acierto de palabra
-                bar.style.backgroundColor = volume > 50 ? "#ff4757" : "#007bff";
+                
+                // Color dinámico: cambia a rojo si el volumen es alto
+                bar.style.backgroundColor = scale > 2.5 ? "#ff4757" : "#007bff";
             });
 
-            // --- 2. LÓGICA DE PREDICCIÓN (UNIFICADA) ---
+            // --- 2. LÓGICA DE PREDICCIÓN (SE MANTIENE IGUAL) ---
             const labels = recognizer.wordLabels();
             const formattedPredictions = labels.map((label, index) => ({
                 className: label,
                 probability: result.scores[index]
             }));
-
-            // Enviamos al procesador común
             processPredictions(formattedPredictions);
 
         }, { 
@@ -222,9 +226,7 @@
             includeSpectrogram: true, 
             invokeCallbackOnNoise: true 
         });
-    } catch (e) {
-        console.error("Error en Audio:", e);
-    }
+    } catch (e) { console.error(e); }
 }
 
     async function startVisualML(modelUrl, type) {
