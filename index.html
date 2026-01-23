@@ -200,7 +200,10 @@
             uartCharacteristic = await service.getCharacteristic('6e400003-b5a3-f393-e0a9-e50e24dcca9e');
             
             document.getElementById("setup-ui").style.display = "none";
-            
+            // ... después de ocultar la UI ...
+
+            // Añadimos un estado al historial para interceptar el botón atrá
+            history.pushState({ page: 'model-running' }, "ML Running", ""); 
             // --- INICIALIZACIÓN SEGÚN TIPO ---
             if (modelType === "audio") {
                 document.getElementById("audio-visualizer").style.display = "flex";
@@ -217,6 +220,41 @@
             alert("Error de conexión. Asegúrate de que el micro:bit esté en modo emparejamiento.");
         }
     }
+
+    window.onpopstate = async function(event) {
+        // Si volvemos atrás y la UI de configuración estaba oculta, reseteamos todo
+        if (document.getElementById("setup-ui").style.display === "none") {
+            await disconnectAndReset();
+        }
+    };
+
+    async function disconnectAndReset() {
+    console.log("Desconectando...");
+
+    // 1. Detener el modelo de audio si existe
+    if (recognizer && recognizer.isListening()) {
+        await recognizer.stopListening();
+    }
+
+    // 2. Detener la webcam si existe
+    if (webcam) {
+        await webcam.stop();
+        const container = document.getElementById("webcam-container");
+        if (container.firstChild) container.removeChild(container.firstChild);
+        container.style.display = "none";
+    }
+
+    // 3. Desconectar Bluetooth
+    if (bleDevice && bleDevice.gatt.connected) {
+        await bleDevice.gatt.disconnect();
+    }
+
+    // 4. Resetear UI
+    document.getElementById("setup-ui").style.display = "block";
+    document.getElementById("audio-visualizer").style.display = "none";
+    document.getElementById("label-container").innerText = "";
+    lastPrediction = "";
+}
     async function startAudioML(modelUrl) {
     try {
         const checkpoint = modelUrl + "model.json";
