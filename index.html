@@ -242,6 +242,11 @@
     async function disconnectAndReset() {
     console.log("Desconectando...");
 
+    if (animationId) {
+        window.cancelAnimationFrame(animationId);
+        animationId = null; // Limpiamos la variable para el próximo inicio
+    }
+
     // 1. Detener el modelo de audio si existe
     if (recognizer && recognizer.isListening()) {
         await recognizer.stopListening();
@@ -307,7 +312,7 @@
         await webcam.setup();
         await webcam.play();
         document.getElementById("webcam-container").appendChild(webcam.canvas);
-        window.requestAnimationFrame(visualLoop);
+        animationId = window.requestAnimationFrame(visualLoop);
     }
 
     async function visualLoop() {
@@ -320,7 +325,7 @@
             prediction = await model.predict(posenetOutput);
         }
         processPredictions(prediction);
-        window.requestAnimationFrame(visualLoop);
+        animationId = window.requestAnimationFrame(visualLoop);
     }
 
     function processPredictions(predictions) {
