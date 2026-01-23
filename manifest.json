@@ -1,5 +1,5 @@
 {
-  "name": "ML micro:bit 2026",
+  "name": "ML micro:bit",
   "short_name": "ML-Bit",
   "description": "Control de micro:bit mediante Machine Learning",
   "start_url": "./index.html",
