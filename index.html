@@ -124,6 +124,7 @@
     let bleDevice; 
     let lastPrediction = "";
     let modelType = "";
+    let isModelRunning = false;
 
     // BLOQUEO DE ZOOM
     document.addEventListener('touchmove', (e) => {
@@ -221,9 +222,11 @@
                 // Iniciamos el visualizador nativo (Independiente)
                 startIndependentVisualizer();
                 // Iniciamos la IA (Solo para reconocer palabras y enviar al micro:bit)
+                isModelRunning = true;
                 startAudioML(TM_MODEL_URL);
             } else {
                 document.getElementById("webcam-container").style.display = "block";
+                isModelRunning = true;
                 startVisualML(TM_MODEL_URL, modelType); 
             }
         } catch (error) { 
@@ -241,6 +244,7 @@
 
     async function disconnectAndReset() {
     console.log("Desconectando...");
+    isModelRunning = false;
 
     if (animationId) {
         window.cancelAnimationFrame(animationId);
@@ -267,9 +271,10 @@
         
 
     // 3. LIMPIEZA DE INTERFAZ (Lo que pides)
+    document.getElementById("label-container").innerText = ""; // <-- ESTO BORRA LA CLASE
     document.getElementById("setup-ui").style.display = "flex"; // Volver a mostrar el panel
     document.getElementById("audio-visualizer").style.display = "none";
-    document.getElementById("label-container").innerText = ""; // <-- ESTO BORRA LA CLASE
+    
     
     // 4. Resetear variables de control
     lastPrediction = "";
@@ -343,6 +348,8 @@
     }
 
     function updateLabelAndSend(name) {
+        // Si el interruptor está apagado, ignoramos cualquier predicción que llegue tarde
+        if (!isModelRunning) return; 
         lastPrediction = name;
         document.getElementById("label-container").innerText = name;
         sendToMicrobit(name);
