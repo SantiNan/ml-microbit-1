@@ -271,7 +271,7 @@
         for (let p of predictions) {
             if (p.probability > 0.85) { // Umbral de confianza
                 // Filtros: que no sea ruido de fondo y que sea distinta a la última enviada
-                if (p.className !== "Background Noise" && p.className !== lastPrediction) {
+                if (p.className !== "Ruido de fondo" && p.className !== lastPrediction) {
                     updateLabelAndSend(p.className);
                 }
             }
