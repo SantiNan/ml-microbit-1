@@ -117,260 +117,259 @@
         <div id="label-container"></div>
 
 
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js').catch(err => console.log("SW error", err));
-            });
-        }
-        
-        let model, webcam, recognizer, uartCharacteristic;
-        let bleDevice; 
-        let lastPrediction = "";
-        let modelType = "";
-        let isModelRunning = false;
-
-        // BLOQUEO DE ZOOM
-        document.addEventListener('touchmove', (e) => {
-            if (e.scale !== 1) { e.preventDefault(); }
-        }, { passive: false });
-
-        async function detectModelType(baseUrl) {
-            try {
-                const response = await fetch(baseUrl + "metadata.json");
-                const metadata = await response.json();
-                
-                // En 2026, TM organiza los metadatos por tipo de modelo
-                if (metadata.packageName === "@teachablemachine/image") return "image";
-                if (metadata.packageName === "@teachablemachine/pose") return "pose";
-                
-                // El modelo de audio suele tener una estructura diferente o palabras clave específicas
-                if (metadata.wordLabels || metadata.sampleRate) return "audio";
-                
-                return "image"; // Por defecto
-            } catch (e) {
-                console.error("Error detectando modelo:", e);
-                return "image";
+        <script>
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('sw.js').catch(err => console.log("SW error", err));
+                });
             }
-        }
-
-        async function startIndependentVisualizer() {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const analyser = audioContext.createAnalyser();
-            const source = audioContext.createMediaStreamSource(stream);
             
-            // Configuración para mayor fluidez
-            analyser.fftSize = 256; 
-            analyser.smoothingTimeConstant = 0.8; // Suaviza el movimiento entre frames
-            source.connect(analyser);
+            let model, webcam, recognizer, uartCharacteristic;
+            let bleDevice; 
+            let lastPrediction = "";
+            let modelType = "";
+            let isModelRunning = false;
 
-            const dataArray = new Uint8Array(analyser.frequencyBinCount);
-            const bars = document.querySelectorAll('.bar');
+            // BLOQUEO DE ZOOM
+            document.addEventListener('touchmove', (e) => {
+                if (e.scale !== 1) { e.preventDefault(); }
+            }, { passive: false });
 
-            function updateBars() {
-                requestAnimationFrame(updateBars);
-                analyser.getByteFrequencyData(dataArray);
-
-                bars.forEach((bar, i) => {
-                    // Seleccionamos un rango de frecuencias que se vea bien (índices bajos para bajos/mids)
-                    const value = dataArray[i * 2] || 0; 
-                    let scale = (value / 255) * 4; // Escala de 0 a 4 veces el tamaño base
-                    if (scale < 0.2) scale = 0.2;
-
-                    bar.style.transform = `scaleY(${scale})`;
-                    // Cambio de color opcional basado en la intensidad
-                    bar.style.backgroundColor = value > 180 ? "#ff4757" : "#007bff";
-                });
-            }
-            updateBars();
-        } catch (err) {
-            console.error("Error visualizador independiente:", err);
-        }
-    }
-
-        async function init() {
-            const urlInput = document.getElementById("model-url").value.trim();
-            if (!urlInput.includes("teachablemachine.withgoogle.com")) {
-                alert("Ingresa una URL válida.");
-                return;
-            }
-        
-            const TM_MODEL_URL = urlInput.endsWith("/") ? urlInput : urlInput + "/";
-        
-            try {
-                // --- DETECCIÓN AUTOMÁTICA ---
-                modelType = await detectModelType(TM_MODEL_URL);
-                console.log("Modelo detectado:", modelType);
-        
-                // --- CONEXIÓN BLUETOOTH ---
-                bleDevice = await navigator.bluetooth.requestDevice({
-                    filters: [{ namePrefix: 'BBC micro:bit' }, { namePrefix: 'micro:bit' }],
-                    optionalServices: ['6e400001-b5a3-f393-e0a9-e50e24dcca9e']
-                });
-        
-                const server = await bleDevice.gatt.connect();
-                const service = await server.getPrimaryService('6e400001-b5a3-f393-e0a9-e50e24dcca9e');
-                // Usamos 0002 para escritura (TX) como mencionamos antes
-                uartCharacteristic = await service.getCharacteristic('6e400003-b5a3-f393-e0a9-e50e24dcca9e');
-                
-                document.getElementById("setup-ui").style.display = "none";
-                // ... después de ocultar la UI ...
-
-                // Añadimos un estado al historial para interceptar el botón atrá
-                history.pushState({ page: 'model-running' }, "ML Running", ""); 
-                // --- INICIALIZACIÓN SEGÚN TIPO ---
-                if (modelType === "audio") {
-                    document.getElementById("audio-visualizer").style.display = "flex";
-                    // Iniciamos el visualizador nativo (Independiente)
-                    startIndependentVisualizer();
-                    // Iniciamos la IA (Solo para reconocer palabras y enviar al micro:bit)
-                    isModelRunning = true;
-                    startAudioML(TM_MODEL_URL);
-                } else {
-                    document.getElementById("webcam-container").style.display = "block";
-                    isModelRunning = true;
-                    startVisualML(TM_MODEL_URL, modelType); 
+            async function detectModelType(baseUrl) {
+                try {
+                    const response = await fetch(baseUrl + "metadata.json");
+                    const metadata = await response.json();
+                    
+                    // En 2026, TM organiza los metadatos por tipo de modelo
+                    if (metadata.packageName === "@teachablemachine/image") return "image";
+                    if (metadata.packageName === "@teachablemachine/pose") return "pose";
+                    
+                    // El modelo de audio suele tener una estructura diferente o palabras clave específicas
+                    if (metadata.wordLabels || metadata.sampleRate) return "audio";
+                    
+                    return "image"; // Por defecto
+                } catch (e) {
+                    console.error("Error detectando modelo:", e);
+                    return "image";
                 }
-            } catch (error) { 
-                console.error("Error:", error);
-                alert("Error de conexión. Asegúrate de que el micro:bit esté en modo emparejamiento.");
+            }
+
+            async function startIndependentVisualizer() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const analyser = audioContext.createAnalyser();
+                const source = audioContext.createMediaStreamSource(stream);
+                
+                // Configuración para mayor fluidez
+                analyser.fftSize = 256; 
+                analyser.smoothingTimeConstant = 0.8; // Suaviza el movimiento entre frames
+                source.connect(analyser);
+
+                const dataArray = new Uint8Array(analyser.frequencyBinCount);
+                const bars = document.querySelectorAll('.bar');
+
+                function updateBars() {
+                    requestAnimationFrame(updateBars);
+                    analyser.getByteFrequencyData(dataArray);
+
+                    bars.forEach((bar, i) => {
+                        // Seleccionamos un rango de frecuencias que se vea bien (índices bajos para bajos/mids)
+                        const value = dataArray[i * 2] || 0; 
+                        let scale = (value / 255) * 4; // Escala de 0 a 4 veces el tamaño base
+                        if (scale < 0.2) scale = 0.2;
+
+                        bar.style.transform = `scaleY(${scale})`;
+                        // Cambio de color opcional basado en la intensidad
+                        bar.style.backgroundColor = value > 180 ? "#ff4757" : "#007bff";
+                    });
+                }
+                updateBars();
+            } catch (err) {
+                console.error("Error visualizador independiente:", err);
             }
         }
 
-        window.onpopstate = async function(event) {
-            // Si volvemos atrás y la UI de configuración estaba oculta, reseteamos todo
-            if (document.getElementById("setup-ui").style.display === "none") {
-                await disconnectAndReset();
-            }
-        };
-
-        async function disconnectAndReset() {
-        console.log("Desconectando...");
-        isModelRunning = false;
-
-        if (animationId) {
-            window.cancelAnimationFrame(animationId);
-            animationId = null; // Limpiamos la variable para el próximo inicio
-        }
-
-        // 1. Detener el modelo de audio si existe
-        if (recognizer && recognizer.isListening()) {
-            await recognizer.stopListening();
-        }
-
-        // 2. Detener la webcam si existe
-        if (webcam) {
-            await webcam.stop();
-            const container = document.getElementById("webcam-container");
-            if (container.firstChild) container.removeChild(container.firstChild);
-            container.style.display = "none";
-        }
-
-        // 3. Desconectar Bluetooth
-        if (bleDevice && bleDevice.gatt.connected) {
-            await bleDevice.gatt.disconnect();
-        }
+            async function init() {
+                const urlInput = document.getElementById("model-url").value.trim();
+                if (!urlInput.includes("teachablemachine.withgoogle.com")) {
+                    alert("Ingresa una URL válida.");
+                    return;
+                }
             
-
-        // 3. LIMPIEZA DE INTERFAZ (Lo que pides)
-        document.getElementById("label-container").innerText = ""; // <-- ESTO BORRA LA CLASE
-        document.getElementById("setup-ui").style.display = "flex"; // Volver a mostrar el panel
-        document.getElementById("audio-visualizer").style.display = "none";
-        
-        
-        // 4. Resetear variables de control
-        lastPrediction = "";
-    }
-        async function startAudioML(modelUrl) {
-        try {
-            const checkpoint = modelUrl + "model.json";
-            const metadata = modelUrl + "metadata.json";
-            recognizer = speechCommands.create("BROWSER_FFT", undefined, checkpoint, metadata);
-            await recognizer.ensureModelLoaded();
-
-            recognizer.listen(result => {
-                // --- LÓGICA DE PREDICCIÓN ÚNICAMENTE ---
-                const labels = recognizer.wordLabels();
-                const formattedPredictions = labels.map((label, index) => ({
-                    className: label,
-                    probability: result.scores[index]
-                }));
-
-                // Enviamos al procesador común (Imagen/Pose/Audio)
-                processPredictions(formattedPredictions);
-
-            }, { 
-                // Subimos el umbral de nuevo ya que las barras no dependen de esto
-                probabilityThreshold: 0.75, 
-                includeSpectrogram: false, // Ya no necesitamos el espectrograma aquí
-                invokeCallbackOnNoise: true 
-            });
-        } catch (e) {
-            console.error("Error en el modelo de Audio:", e);
-        }
-    }
-
-        async function startVisualML(modelUrl, type) {
-            const modelJson = modelUrl + "model.json";
-            const metadataJson = modelUrl + "metadata.json";
-            model = (type === "image") ? await tmImage.load(modelJson, metadataJson) : await tmPose.load(modelJson, metadataJson);
+                const TM_MODEL_URL = urlInput.endsWith("/") ? urlInput : urlInput + "/";
             
-            webcam = new (type === "image" ? tmImage.Webcam : tmPose.Webcam)(400, 400, true);
-            await webcam.setup();
-            await webcam.play();
-            document.getElementById("webcam-container").appendChild(webcam.canvas);
-            animationId = window.requestAnimationFrame(visualLoop);
-        }
+                try {
+                    // --- DETECCIÓN AUTOMÁTICA ---
+                    modelType = await detectModelType(TM_MODEL_URL);
+                    console.log("Modelo detectado:", modelType);
+            
+                    // --- CONEXIÓN BLUETOOTH ---
+                    bleDevice = await navigator.bluetooth.requestDevice({
+                        filters: [{ namePrefix: 'BBC micro:bit' }, { namePrefix: 'micro:bit' }],
+                        optionalServices: ['6e400001-b5a3-f393-e0a9-e50e24dcca9e']
+                    });
+            
+                    const server = await bleDevice.gatt.connect();
+                    const service = await server.getPrimaryService('6e400001-b5a3-f393-e0a9-e50e24dcca9e');
+                    // Usamos 0002 para escritura (TX) como mencionamos antes
+                    uartCharacteristic = await service.getCharacteristic('6e400003-b5a3-f393-e0a9-e50e24dcca9e');
+                    
+                    document.getElementById("setup-ui").style.display = "none";
+                    // ... después de ocultar la UI ...
 
-        async function visualLoop() {
-            webcam.update();
-            let prediction;
-            if (modelType === "image") {
-                prediction = await model.predict(webcam.canvas);
-            } else {
-                const { posenetOutput } = await model.estimatePose(webcam.canvas);
-                prediction = await model.predict(posenetOutput);
+                    // Añadimos un estado al historial para interceptar el botón atrás
+                    history.pushState({ page: 'model-running' }, "ML Running", ""); 
+                    // --- INICIALIZACIÓN SEGÚN TIPO ---
+                    if (modelType === "audio") {
+                        document.getElementById("audio-visualizer").style.display = "flex";
+                        // Iniciamos el visualizador nativo (Independiente)
+                        startIndependentVisualizer();
+                        // Iniciamos la IA (Solo para reconocer palabras y enviar al micro:bit)
+                        isModelRunning = true;
+                        startAudioML(TM_MODEL_URL);
+                    } else {
+                        document.getElementById("webcam-container").style.display = "block";
+                        isModelRunning = true;
+                        startVisualML(TM_MODEL_URL, modelType); 
+                    }
+                } catch (error) { 
+                    console.error("Error:", error);
+                    alert("Error de conexión. Asegúrate de que el micro:bit esté en modo emparejamiento.");
+                }
             }
-            processPredictions(prediction);
-            animationId = window.requestAnimationFrame(visualLoop);
+
+            window.onpopstate = async function(event) {
+                // Si volvemos atrás y la UI de configuración estaba oculta, reseteamos todo
+                if (document.getElementById("setup-ui").style.display === "none") {
+                    await disconnectAndReset();
+                }
+            };
+
+            async function disconnectAndReset() {
+            console.log("Desconectando...");
+            isModelRunning = false;
+
+            if (animationId) {
+                window.cancelAnimationFrame(animationId);
+                animationId = null; // Limpiamos la variable para el próximo inicio
+            }
+
+            // 1. Detener el modelo de audio si existe
+            if (recognizer && recognizer.isListening()) {
+                await recognizer.stopListening();
+            }
+
+            // 2. Detener la webcam si existe
+            if (webcam) {
+                await webcam.stop();
+                const container = document.getElementById("webcam-container");
+                if (container.firstChild) container.removeChild(container.firstChild);
+                container.style.display = "none";
+            }
+
+            // 3. Desconectar Bluetooth
+            if (bleDevice && bleDevice.gatt.connected) {
+                await bleDevice.gatt.disconnect();
+            }
+                
+
+            // 3. LIMPIEZA DE INTERFAZ (Lo que pides)
+            document.getElementById("label-container").innerText = ""; // <-- ESTO BORRA LA CLASE
+            document.getElementById("setup-ui").style.display = "flex"; // Volver a mostrar el panel
+            document.getElementById("audio-visualizer").style.display = "none";
+            
+            
+            // 4. Resetear variables de control
+            lastPrediction = "";
+        }
+            async function startAudioML(modelUrl) {
+            try {
+                const checkpoint = modelUrl + "model.json";
+                const metadata = modelUrl + "metadata.json";
+                recognizer = speechCommands.create("BROWSER_FFT", undefined, checkpoint, metadata);
+                await recognizer.ensureModelLoaded();
+
+                recognizer.listen(result => {
+                    // --- LÓGICA DE PREDICCIÓN ÚNICAMENTE ---
+                    const labels = recognizer.wordLabels();
+                    const formattedPredictions = labels.map((label, index) => ({
+                        className: label,
+                        probability: result.scores[index]
+                    }));
+
+                    // Enviamos al procesador común (Imagen/Pose/Audio)
+                    processPredictions(formattedPredictions);
+
+                }, { 
+                    probabilityThreshold: 0.75, 
+                    includeSpectrogram: false, 
+                    invokeCallbackOnNoise: true 
+                });
+            } catch (e) {
+                console.error("Error en el modelo de Audio:", e);
+            }
         }
 
-        function processPredictions(predictions) {
-            if (!predictions) return;
-        
-            // Buscamos si alguna predicción supera el umbral
-            for (let p of predictions) {
-                if (p.probability > 0.85) { // Umbral de confianza
-                    // Filtros: que no sea ruido de fondo y que sea distinta a la última enviada
-                    if (p.className !== "Ruido de fondo" && p.className !== lastPrediction) {
-                        updateLabelAndSend(p.className);
+            async function startVisualML(modelUrl, type) {
+                const modelJson = modelUrl + "model.json";
+                const metadataJson = modelUrl + "metadata.json";
+                model = (type === "image") ? await tmImage.load(modelJson, metadataJson) : await tmPose.load(modelJson, metadataJson);
+                
+                webcam = new (type === "image" ? tmImage.Webcam : tmPose.Webcam)(400, 400, true);
+                await webcam.setup();
+                await webcam.play();
+                document.getElementById("webcam-container").appendChild(webcam.canvas);
+                animationId = window.requestAnimationFrame(visualLoop);
+            }
+
+            async function visualLoop() {
+                webcam.update();
+                let prediction;
+                if (modelType === "image") {
+                    prediction = await model.predict(webcam.canvas);
+                } else {
+                    const { posenetOutput } = await model.estimatePose(webcam.canvas);
+                    prediction = await model.predict(posenetOutput);
+                }
+                processPredictions(prediction);
+                animationId = window.requestAnimationFrame(visualLoop);
+            }
+
+            function processPredictions(predictions) {
+                if (!predictions) return;
+            
+                // Buscamos si alguna predicción supera el umbral
+                for (let p of predictions) {
+                    if (p.probability > 0.85) { // Umbral de confianza
+                        // Filtros: que no sea ruido de fondo y que sea distinta a la última enviada
+                        if (p.className !== "Ruido de fondo" && p.className !== lastPrediction) {
+                            updateLabelAndSend(p.className);
+                        }
                     }
                 }
             }
-        }
 
-        function updateLabelAndSend(name) {
-            // Si el interruptor está apagado, ignoramos cualquier predicción que llegue tarde
-            if (!isModelRunning) return; 
-            lastPrediction = name;
-            document.getElementById("label-container").innerText = name;
-            sendToMicrobit(name);
-        }
+            function updateLabelAndSend(name) {
+                // Si el interruptor está apagado, ignoramos cualquier predicción que llegue tarde
+                if (!isModelRunning) return; 
+                lastPrediction = name;
+                document.getElementById("label-container").innerText = name;
+                sendToMicrobit(name);
+            }
 
-        async function sendToMicrobit(name) {
-            if (uartCharacteristic && bleDevice.gatt.connected) {
-                try {
-                    const encoder = new TextEncoder();
-                    await uartCharacteristic.writeValue(encoder.encode(name + "\n"));
-                    console.log("Enviado: " + name);
-                } catch (e) { 
-                    console.warn("Error envío:", e); 
-                    lastPrediction = ""; 
+            async function sendToMicrobit(name) {
+                if (uartCharacteristic && bleDevice.gatt.connected) {
+                    try {
+                        const encoder = new TextEncoder();
+                        await uartCharacteristic.writeValue(encoder.encode(name + "\n"));
+                        console.log("Enviado: " + name);
+                    } catch (e) { 
+                        console.warn("Error envío:", e); 
+                        lastPrediction = ""; 
+                    }
                 }
             }
-        }
-    </script>
+        </script>
     </body>
 </html>
